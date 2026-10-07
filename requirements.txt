@@ -1,0 +1,7 @@
+dnslib
+cryptography
+matplotlib
+pandas
+psutil
+jupyter
+python-dotenv
