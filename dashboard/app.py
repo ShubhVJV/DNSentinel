@@ -209,8 +209,54 @@ if "transmission_history" not in st.session_state:
 # Header
 # ==========================================
 st.markdown("<h2 style='margin-bottom: 0;'>DNSentinel Dashboard</h2>", unsafe_allow_html=True)
-st.markdown("<p style='color: #94a3b8; font-size: 1rem;'>Adaptive Encrypted DNS Tunnel Telemetry</p>", unsafe_allow_html=True)
+st.markdown("<p style='color: #94a3b8; font-size: 1rem;'>Adaptive Encrypted DNS Tunnel Telemetry & Threat Intelligence</p>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
+
+# Navigation
+page = st.sidebar.radio("Navigation", ["Secure Tunnel", "Threat Detection (Live)"])
+
+@st.cache_resource
+def get_analyzer():
+    from detection.analyzer import DNSAnalyzer
+    analyzer = DNSAnalyzer()
+    analyzer.start_sniffing()
+    analyzer.simulate_traffic() # Fallback for demo
+    return analyzer
+
+def render_threat_detection():
+    st.markdown('<div class="section-title">Live Threat Intelligence Dashboard</div>', unsafe_allow_html=True)
+    analyzer = get_analyzer()
+    
+    col1, col2, col3, col4 = st.columns(4)
+    col1.markdown(render_metric_card("Total Packets Analyzed", len(analyzer.packet_logs)), unsafe_allow_html=True)
+    col2.markdown(render_metric_card("Active Alerts", len(analyzer.alerts), "offline" if len(analyzer.alerts)>0 else "online"), unsafe_allow_html=True)
+    col3.markdown(render_metric_card("Unique IPs Tracked", len(analyzer.query_history)), unsafe_allow_html=True)
+    col4.markdown(render_metric_card("Analysis Engine", "Running", "online" if analyzer.is_running else "offline"), unsafe_allow_html=True)
+    
+    auto_refresh = st.checkbox("Auto-Refresh (1s)", value=True)
+    
+    st.markdown("### Recent Alerts")
+    if analyzer.alerts:
+        alerts_df = pd.DataFrame(analyzer.alerts[::-1])
+        st.dataframe(alerts_df.head(10), use_container_width=True)
+    else:
+        st.info("No threats detected yet.")
+        
+    st.markdown("### Live DNS Traffic Stream")
+    if analyzer.packet_logs:
+        logs_df = pd.DataFrame(analyzer.packet_logs[::-1])
+        st.dataframe(logs_df.head(15), use_container_width=True)
+    else:
+        st.info("Listening for DNS packets...")
+        
+    if auto_refresh:
+        import time
+        time.sleep(1)
+        st.rerun()
+
+if page == "Threat Detection (Live)":
+    render_threat_detection()
+    st.stop()
 
 
 # ==========================================
